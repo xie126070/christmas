@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>我的圣诞树上，你在哪儿？</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  html, body { min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(150,225,255,.45) 0%, transparent 62%),
+      linear-gradient(180deg, #5aa7c9 0%, #2e6f96 38%, #123a56 72%, #071b2c 100%);
+    color: #eaf6ff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px 32px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ocean { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .fish {
+    position: absolute; left: 0;
+    image-rendering: pixelated;
+    animation: swim linear infinite;
+    will-change: transform;
+  }
+  .fish.rev { animation-name: swim-rev; }
+  @keyframes swim { from { transform: translateX(-16vw); } to { transform: translateX(116vw); } }
+  @keyframes swim-rev { from { transform: translateX(116vw) scaleX(-1); } to { transform: translateX(-16vw) scaleX(-1); } }
+
+  .snow { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+  .snowflake {
+    position: absolute; top: -12px; background: #fff; border-radius: 50%;
+    filter: blur(.4px); animation: fall linear infinite;
+  }
+  @keyframes fall { to { transform: translateY(112vh) translateX(26px); } }
+
+  .scene { position: relative; z-index: 2; width: 100%; max-width: 420px; text-align: center; }
+
+  h1 { font-size: 1.55rem; letter-spacing: .02em; margin-bottom: 8px; text-shadow: 0 0 18px rgba(140,230,255,.5); }
+  .subtitle { color: #bfe6ff; font-size: .9rem; line-height: 1.6; margin-bottom: 26px; }
+
+  input[type="text"] {
+    width: 100%; padding: 14px 18px; border-radius: 999px;
+    border: 1px solid rgba(160,225,255,.35);
+    background: rgba(255,255,255,.08); color: #fff;
+    font-size: 1rem; text-align: center; outline: none;
+    margin-bottom: 16px; transition: border-color .2s, box-shadow .2s;
+  }
+  input[type="text"]::placeholder { color: #8fbcd8; }
+  input[type="text"]:focus { border-color: rgba(150,230,255,.85); box-shadow: 0 0 20px rgba(110,215,255,.45); }
+  .shake { animation: shake .3s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+  .btn {
+    display: inline-block; padding: 13px 38px; border: none; border-radius: 999px;
+    font-size: 1rem; font-weight: 600; color: #073046; cursor: pointer;
+    background: linear-gradient(180deg, #d8f6ff, #7fd2f0);
+    box-shadow: 0 0 26px rgba(130,225,255,.6), 0 6px 16px rgba(0,0,0,.35);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn:hover { box-shadow: 0 0 34px rgba(160,235,255,.9), 0 6px 16px rgba(0,0,0,.35); }
+
+  .btn-secondary {
+    display: inline-block; padding: 12px 26px; border-radius: 999px;
+    font-size: .95rem; font-weight: 600; cursor: pointer;
+    color: #dff4ff; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(160,225,255,.5); transition: all .2s;
+  }
+  .btn-secondary:hover { background: rgba(130,210,255,.18); }
+
+  #quiz-screen { text-align: left; }
+  .progress { text-align: center; color: #a7d6ef; font-size: .85rem; margin-bottom: 12px; letter-spacing: .05em; }
+  .question { text-align: center; font-size: 1.15rem; line-height: 1.5; min-height: 3.2em; margin-bottom: 22px; }
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 12px; width: 100%;
+    padding: 14px 18px; border-radius: 14px; cursor: pointer; text-align: left;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(160,225,255,.25);
+    color: #eaf6ff; font-size: 1rem; line-height: 1.5; transition: all .2s;
+  }
+  .option .idx {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; background: rgba(150,220,255,.18); margin-top: 1px;
+  }
+  .option:hover { background: rgba(130,210,255,.16); border-color: rgba(150,230,255,.6); }
+  .option.correct { background: rgba(60,230,180,.18); border-color: rgba(60,230,180,.8); box-shadow: 0 0 16px rgba(60,230,180,.35); }
+  .option.wrong { background: rgba(255,90,130,.16); border-color: rgba(255,90,130,.8); }
+  .option:disabled { cursor: default; }
+
+  #result-screen { display: flex; flex-direction: column; align-items: center; }
+  .stage { position: relative; width: 300px; height: 500px; margin: 0 auto 6px; }
+  .tree-glow {
+    position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%);
+    width: 380px; height: 440px; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(90,215,255,.26), transparent 65%);
+    filter: blur(10px);
+  }
+  .star {
+    position: absolute; top: 10px; left: 50%; width: 40px; height: 40px;
+    transform: translateX(-50%); z-index: 6;
+    filter: drop-shadow(0 0 10px rgba(210,245,255,.95)) drop-shadow(0 0 26px rgba(120,220,255,.65));
+    animation: twinkle 2.4s ease-in-out infinite;
+  }
+  .star.boom { animation: boom .9s ease-out; }
+  @keyframes twinkle { 0%,100% { transform: translateX(-50%) scale(1); opacity: 1; } 50% { transform: translateX(-50%) scale(1.12); opacity: .85; } }
+  @keyframes boom { 0% { transform: translateX(-50%) scale(1); } 35% { transform: translateX(-50%) scale(1.7); filter: drop-shadow(0 0 30px #fff) drop-shadow(0 0 70px #9fe8ff); } 100% { transform: translateX(-50%) scale(1); } }
+
+  .tree { position: absolute; left: 0; top: 50px; width: 300px; height: 420px; }
+  .trunk { position: absolute; left: 50%; bottom: -20px; width: 34px; height: 40px; z-index: 0; transform: translateX(-50%); background: linear-gradient(180deg, #5a3b22, #2e1c0e); border-radius: 4px 4px 6px 6px; }
+  .layer { position: absolute; z-index: 1; }
+  .layer-1 { left: 75px; top: 0; width: 150px; height: 150px; z-index: 3; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #4fd0a0, #1d7a5c); filter: drop-shadow(0 0 12px rgba(80,235,200,.4)); }
+  .layer-2 { left: 38px; top: 110px; width: 224px; height: 160px; z-index: 2; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #3bb98c, #166a4a); filter: drop-shadow(0 0 12px rgba(80,235,200,.35)); }
+  .layer-3 { left: 0; top: 244px; width: 300px; height: 176px; z-index: 1; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #2fa07a, #0f5a3c); filter: drop-shadow(0 0 14px rgba(80,235,200,.3)); }
+  .ground { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 340px; height: 64px; pointer-events: none; background: radial-gradient(ellipse at center, rgba(190,235,255,.28), transparent 70%); filter: blur(7px); }
+  .orn-layer { position: absolute; left: 0; top: 50px; width: 300px; height: 420px; pointer-events: none; z-index: 4; }
+
+  .deco { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); animation: glimmer 3s ease-in-out infinite; }
+  @keyframes glimmer { 0%,100% { opacity: .55; box-shadow: 0 0 4px currentColor; } 50% { opacity: 1; box-shadow: 0 0 12px currentColor, 0 0 22px currentColor; } }
+
+  .friend-pin { position: absolute; z-index: 5; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); transition: left 1.1s cubic-bezier(.22,1.1,.36,1), top 1.1s cubic-bezier(.22,1.1,.36,1); }
+  .pin-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; color: #0a3550; background: radial-gradient(circle at 30% 25%, #ffffff, #bfeaff 45%, #5aa7c9 100%); animation: pinPulse 2.2s ease-in-out infinite; }
+  @keyframes pinPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,255,255,.9), 0 0 16px rgba(150,230,255,.75), 0 0 34px rgba(90,200,255,.45); } 50% { box-shadow: 0 0 0 3px rgba(255,255,255,.95), 0 0 26px rgba(190,245,255,1), 0 0 56px rgba(110,215,255,.75); } }
+  .pin-name { margin-top: 6px; font-size: .72rem; padding: 2px 9px; border-radius: 999px; white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis; background: rgba(6,30,50,.8); border: 1px solid rgba(160,230,255,.6); color: #dff4ff; }
+
+  .result-title { font-size: 1.3rem; margin: 4px 0; color: #d6f4ff; text-shadow: 0 0 16px rgba(120,220,255,.5); }
+  .result-score { font-size: .95rem; color: #a9d8f0; margin-bottom: 8px; }
+  .result-quote { font-size: 1rem; line-height: 1.65; margin-bottom: 14px; color: #eaf6ff; }
+  .rank-line { font-size: .9rem; color: #a9d8f0; margin-bottom: 16px; padding: 6px 16px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(160,225,255,.25); }
+  .result-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+
+  .answer-panel { width: 100%; max-width: 420px; text-align: left; margin-bottom: 18px; padding: 16px; border-radius: 16px; background: rgba(6,30,50,.6); border: 1px solid rgba(160,225,255,.25); }
+  .answer-item { margin-bottom: 14px; font-size: .9rem; line-height: 1.6; }
+  .answer-item:last-child { margin-bottom: 0; }
+  .answer-q { color: #d6f4ff; font-weight: 600; margin-bottom: 4px; }
+  .answer-yours { color: #ff9db4; }
+  .answer-yours.ok { color: #7be0c3; }
+  .answer-right { color: #9be7ff; }
+
+  /* 小鱼吐泡泡 */
+  .bubble-overlay { position: fixed; inset: 0; z-index: 999; overflow: hidden; cursor: pointer; background: radial-gradient(ellipse at 50% 64%, #153552 0%, #0a1f33 48%, #030a14 100%); opacity: 0; transition: opacity .45s; }
+  .bubble-overlay.show { opacity: 1; }
+  .bubble-sky { position: absolute; inset: 0; pointer-events: none; }
+  .star-dot { position: absolute; display: block; background: #dff4ff; border-radius: 1px; box-shadow: 0 0 6px rgba(190,240,255,.7); animation: starTwinkle 3s ease-in-out infinite; }
+  @keyframes starTwinkle { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+  .bubble-mercury { position: absolute; top: 23.6%; right: 14%; width: 9px; height: 9px; border-radius: 50%; background: #ffd9a8; box-shadow: 0 0 14px rgba(255,200,140,.8), 0 0 32px rgba(255,170,90,.4); animation: mercuryPulse 4s ease-in-out infinite; }
+  @keyframes mercuryPulse { 0%,100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.15); } }
+  .bubble-fish-wrap { position: absolute; left: 50%; bottom: 23.6%; transform: translateX(-50%); animation: fishFloat 3.2s ease-in-out infinite; }
+  .bubble-fish { width: 116px; height: 75px; display: block; image-rendering: pixelated; filter: drop-shadow(0 0 14px rgba(140,225,255,.7)) drop-shadow(0 0 30px rgba(80,190,255,.4)); }
+  @keyframes fishFloat { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
+  .bubble-field { position: absolute; left: 50%; bottom: 28.6%; width: 0; height: 0; pointer-events: none; }
+  .bubble { position: absolute; left: 0; bottom: 0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95), rgba(190,240,255,.5) 42%, rgba(130,205,255,.18) 70%, transparent 80%); border: 1px solid rgba(210,248,255,.55); box-shadow: 0 0 14px rgba(150,225,255,.55), inset 0 0 8px rgba(255,255,255,.3); transform: translate(-50%, 0); opacity: 0; animation: bubbleRise 1.5s ease-out forwards; }
+  @keyframes bubbleRise { 0% { transform: translate(-50%, 0) scale(.3); opacity: 0; } 14% { opacity: 1; } 70% { opacity: .92; } 100% { transform: translate(calc(-50% + var(--drift)), -26vh) scale(1.05); opacity: 0; } }
+  .bubble-text { position: absolute; left: 50%; top: 38.2%; transform: translateX(-50%); width: min(88vw, 420px); text-align: center; font-size: clamp(1.15rem, 5.2vw, 1.7rem); font-weight: 700; letter-spacing: .1em; line-height: 1.618; color: #bdeeff; text-shadow: 0 0 14px rgba(165,230,255,.5), 0 0 30px rgba(120,205,245,.3); pointer-events: none; }
+  .bubble-text span { display: inline-block; opacity: 0; transform: translateY(10px); animation: charIn .5s ease-out forwards; }
+  .bubble-text span.space { width: .5em; }
+  @keyframes charIn { to { opacity: 1; transform: translateY(0); } }
+  .bubble-hint { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); font-size: .78rem; color: #8fbdd8; opacity: .6; }
+
+  /* 英语泪小鱼 */
+  .tear-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; cursor: pointer; background: radial-gradient(circle at 50% 60%, rgba(12,40,64,.82), rgba(2,10,20,.94)); backdrop-filter: blur(5px); opacity: 0; transition: opacity .35s; }
+  .tear-overlay.show { opacity: 1; }
+  .tear-fish-wrap { position: relative; width: 132px; height: 85px; animation: tearFishFloat 2.2s ease-in-out infinite; filter: drop-shadow(0 0 16px rgba(140,225,255,.65)); }
+  .tear-fish { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  @keyframes tearFishFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  .tear-drop { position: absolute; left: 60%; top: 38%; width: 6px; height: 9px; background: #fff; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: 0 0 10px rgba(255,255,255,.9), 0 0 20px rgba(190,240,255,.6); opacity: 0; animation: tearDrop 1.1s ease-in .55s forwards; }
+  @keyframes tearDrop { 0% { opacity: 0; transform: translateY(0) scale(.4); } 18% { opacity: 1; } 100% { opacity: 0; transform: translateY(52px) scale(1); } }
+  .tear-text { font-size: clamp(1.4rem, 7vw, 2rem); font-weight: 800; letter-spacing: .08em; color: #bdeeff; text-shadow: 0 0 14px rgba(165,230,255,.5), 0 0 30px rgba(120,205,245,.3); opacity: 0; transform: scale(.85); animation: tearTextPop .55s cubic-bezier(.2,1.4,.4,1) 1.35s forwards; }
+  @keyframes tearTextPop { to { opacity: 1; transform: scale(1); } }
+
+  @media (max-width: 360px) { .stage { transform: scale(.9); transform-origin: top center; margin-bottom: -20px; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pixelfish" viewBox="0 0 14 9">
+    <rect x="4" y="2" width="6" height="1" fill="#cdefff"/><rect x="3" y="3" width="8" height="1" fill="#cdefff"/>
+    <rect x="3" y="4" width="8" height="2" fill="#cdefff"/><rect x="4" y="6" width="6" height="1" fill="#cdefff"/>
+    <rect x="2" y="2" width="1" height="2" fill="#8fd4f5"/><rect x="1" y="4" width="2" height="1" fill="#8fd4f5"/>
+    <rect x="2" y="5" width="1" height="2" fill="#8fd4f5"/><rect x="8" y="3" width="1" height="1" fill="#0e3550"/>
+    <rect x="4" y="3" width="2" height="1" fill="#f2fbff"/>
+  </symbol>
+</svg>
+
+<div class="ocean" id="ocean"></div>
+<div class="snow" id="snow"></div>
+
+<div class="bubble-overlay" id="bubble-overlay" hidden>
+  <div class="bubble-sky" id="bubble-sky"></div>
+  <div class="bubble-mercury"></div>
+  <div class="bubble-fish-wrap"><svg class="bubble-fish" viewBox="0 0 14 9"><use href="#pixelfish" /></svg></div>
+  <div class="bubble-field" id="bubble-field"></div>
+  <div class="bubble-text" id="bubble-text"></div>
+  <div class="bubble-hint">点击任意处继续</div>
+</div>
+
+<div class="tear-overlay" id="tear-overlay" hidden></div>
+
+<div class="scene">
+  <section id="start-screen">
+    <h1>我的圣诞树上，你在哪儿？❄️💤🐬</h1>
+    <p class="subtitle">答对越多，你在我的树上挂得越高<br>全对的人可以站上树顶哦</p>
+    <input type="text" id="name-input" maxlength="12" placeholder="输入你的名字🤩" autocomplete="off" />
+    <button class="btn" id="start-btn">开始答题</button>
+  </section>
+
+  <section id="quiz-screen" hidden>
+    <p class="progress" id="progress"></p>
+    <h2 class="question" id="question-text"></h2>
+    <div class="options" id="options"></div>
+  </section>
+
+  <section id="result-screen" hidden>
+    <div class="stage">
+      <div class="tree-glow"></div>
+      <svg class="star" id="star" viewBox="0 0 24 24"><polygon points="12,1.6 15,9 23,9.6 17,14.8 18.8,22.6 12,18.3 5.2,22.6 7,14.8 1,9.6 9,9" fill="#d6f4ff"/></svg>
+      <div class="tree">
+        <div class="trunk"></div><div class="layer layer-3"></div><div class="layer layer-2"></div><div class="layer layer-1"></div>
+      </div>
+      <div class="orn-layer" id="orn-layer"></div>
+      <div class="ground"></div>
+    </div>
+    <h2 class="result-title" id="result-title"></h2>
+    <p class="result-score" id="result-score"></p>
+    <p class="result-quote" id="result-quote"></p>
+    <p class="rank-line" id="rank-line" hidden></p>
+    <div class="result-actions">
+      <button class="btn" id="restart-btn">再测一次</button>
+      <button class="btn-secondary" id="show-answers-btn" hidden>查看正确答案</button>
+    </div>
+    <div class="answer-panel" id="answer-panel" hidden></div>
+  </section>
+</div>
+
+<script>
+/* =========================================================
+   1) 核心配置区（包含你的数据库信息）
+   ========================================================= */
+const CONFIG = {
+  supabase: {
+    url: "https://ilrcpkdojgnghitgcwio.supabase.co/rest/v1",
+    key: "sb_publishable_yjp_Ecr1tk3Imqc2BJXaTg_E3QkEhm0"
+  },
+  questions: [
+    { q: "我的身高大概是多少？", options: ["152 cm", "162 cm", "140 cm", "172 cm"], answer: 0 },
+    { q: "目前来说我最差的一门科目。", options: ["数学", "化学", "英语", "政治"], answer: 2 },
+    { q: "我的视力及佩戴眼镜情况最符合哪一类？", options: ["我视力良好，因此无需佩戴眼镜", "我患有近视，但不常佩戴，仅在需要的时候佩戴", "我患有远视，日常需要佩戴眼镜", "我视力良好，但出于个人喜好有时会佩戴无度数眼镜"], answer: 1 },
+    { q: "我的家乡是？", options: ["河北", "湖南", "河南", "广东"], answer: 2 },
+    { q: "以下哪项最符合我的情况？", options: ["我喜欢读小说，但创作兴趣一般", "我喜欢读小说，同时创作兴趣高昂", "我喜欢自己创作，阅读兴趣一般", "我对小说的阅读和创作兴趣一般"], answer: 0 },
+    { q: "我的就读情况符合哪项？", options: ["初中：秀外　高中：新华", "初中：秀全　高中：圆玄", "初中：云山　高中：新华", "初中：秀全　高中：新华"], answer: 3 },
+    { q: "考前我复习更接近哪种方式？", options: ["提前几天有计划复习", "临时抱佛脚"], answer: 1 },
+    { q: "哪项符合我的游戏喜好及其主要原因？", options: ["我偏好竞技类，可以挂机躺赢，轻松获得收益", "我偏好竞技类、经营类游戏，因为自身操作水平有限，难以适应高强度竞技对抗", "我偏好竞技类对抗，因为胜负带来的成就感和高压高节奏对抗带来的兴奋感", "我偏好创造和经营类，因欣赏这类游戏的审美风格、画面氛围和美术表达"], answer: 1 },
+    { q: "我发表情包最有可能原因是什么？", options: ["单纯觉得这个表情包有意思，想分享给别人", "不想继续聊天，用表情包敷衍对方", "认为文字表达相对单薄，表情包更能准确传达情绪等", "主要受周围人的聊天习惯影响，大家都用我也用"], answer: 2 },
+    { q: "哪个选项最符合我最爱的玩偶？", options: ["名字叫而已", "颜色主要为蓝色", "不属于鱼类", "以上都正确"], answer: 3 }
+  ]
+};
+
+const TREE_W = 300;
+const TREE_H = 420;
+
+/* =========================================================
+   2) 工具与基础特效
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+(function makeFish() {
+  const layer = $("#ocean");
+  for (let i = 0; i < 10; i++) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const rev = Math.random() < 0.5;
+    svg.setAttribute("class", "fish" + (rev ? " rev" : ""));
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", "#pixelfish");
+    svg.appendChild(use);
+    const size = 24 + Math.random() * 34;
+    svg.style.width = size + "px"; svg.style.height = (size * 9 / 14) + "px";
+    svg.style.top = (5 + Math.random() * 84) + "vh"; svg.style.opacity = (0.3 + Math.random() * 0.55).toFixed(2);
+    const dur = 16 + Math.random() * 24;
+    svg.style.animationDuration = dur + "s"; svg.style.animationDelay = (-Math.random() * dur).toFixed(1) + "s";
+    layer.appendChild(svg);
+  }
+})();
+
+(function makeSnow() {
+  const layer = $("#snow");
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement("div");
+    s.className = "snowflake";
+    const size = 2 + Math.random() * 3.5;
+    s.style.left = Math.random() * 100 + "vw"; s.style.width = size + "px"; s.style.height = size + "px";
+    s.style.opacity = (0.3 + Math.random() * 0.7).toFixed(2);
+    s.style.animationDuration = (7 + Math.random() * 11).toFixed(1) + "s";
+    s.style.animationDelay = (-Math.random() * 18).toFixed(1) + "s";
+    frag.appendChild(s);
+  }
+  layer.appendChild(frag);
+})();
+
+/* =========================================================
+   3) 状态与主流程
+   ========================================================= */
+const state = { name: "", index: 0, correct: 0, sceneShown: false, englishShown: false, answers: [] };
+
+const startScreen  = $("#start-screen");
+const quizScreen   = $("#quiz-screen");
+const resultScreen = $("#result-screen");
+const nameInput    = $("#name-input");
+
+$("#start-btn").addEventListener("click", start);
+nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
+
+function start() {
+  const name = nameInput.value.trim();
+  if (!name) {
+    nameInput.classList.remove("shake"); void nameInput.offsetWidth; nameInput.classList.add("shake"); nameInput.focus(); return;
+  }
+  state.name = name; state.index = 0; state.correct = 0; state.sceneShown = false; state.englishShown = false; state.answers = [];
+  startScreen.hidden = true; resultScreen.hidden = true; quizScreen.hidden = false;
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const total = CONFIG.questions.length;
+  const q = CONFIG.questions[state.index];
+  $("#progress").textContent = `第 ${state.index + 1} / ${total} 题`;
+  $("#question-text").textContent = q.q;
+  const box = $("#options"); box.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "option";
+    btn.innerHTML = `<span class="idx">${"ABCD"[i]}</span><span>${esc(opt)}</span>`;
+    btn.addEventListener("click", () => choose(i, btn));
+    box.appendChild(btn);
+  });
+}
+
+function choose(i, btn) {
+  const q = CONFIG.questions[state.index];
+  const all = Array.from(document.querySelectorAll("#options .option"));
+  all.forEach((b) => (b.disabled = true));
+  state.answers[state.index] = i;
+
+  const isCorrect = i === q.answer;
+  if (isCorrect) { state.correct++; btn.classList.add("correct"); }
+  else { btn.classList.add("wrong"); all[q.answer].classList.add("correct"); }
+
+  const reachedEnglish = state.index === 1 && isCorrect && !state.englishShown;
+  const reachedFive = state.correct === 5 && !state.sceneShown;
+
+  setTimeout(() => {
+    if (reachedEnglish) { state.englishShown = true; showEnglishTearScene(advanceAfterAnswer); }
+    else if (reachedFive) { state.sceneShown = true; showBubbleScene(advanceAfterAnswer); }
+    else { advanceAfterAnswer(); }
+  }, 760);
+}
+
+function advanceAfterAnswer() {
+  state.index++;
+  if (state.index >= CONFIG.questions.length) showResult();
+  else renderQuestion();
+}
+
+/* =========================================================
+   4) 两套过场动画
+   ========================================================= */
+function showBubbleScene(done) {
+  const overlay = $("#bubble-overlay"), sky = $("#bubble-sky"), field = $("#bubble-field"), textEl = $("#bubble-text");
+  overlay.hidden = false; sky.innerHTML = ""; field.innerHTML = ""; textEl.innerHTML = "";
+
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 48; i++) {
+    const s = document.createElement("i"); s.className = "star-dot";
+    const sz = Math.random() < 0.7 ? 2 : 3;
+    s.style.width = sz + "px"; s.style.height = sz + "px";
+    s.style.left = (Math.random() * 100).toFixed(2) + "%";
+    s.style.top = (Math.random() < 0.75 ? Math.random() * 61.8 : 61.8 + Math.random() * 28).toFixed(2) + "%";
+    s.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+    frag.appendChild(s);
+  }
+  sky.appendChild(frag);
+  requestAnimationFrame(() => overlay.classList.add("show"));
+
+  const BUBBLES = 5, FIRST = 600, GAP = 320;
+  for (let i = 0; i < BUBBLES; i++) {
+    const b = document.createElement("div"); b.className = "bubble";
+    const size = 14 + Math.random() * 18;
+    b.style.width = size + "px"; b.style.height = size + "px";
+    b.style.setProperty("--drift", ((Math.random() * 2 - 1) * 34).toFixed(1) + "px");
+    b.style.animationDelay = (FIRST + i * GAP) + "ms";
+    field.appendChild(b);
+  }
+
+  const TEXT = "你在的世界 会不会很靠近水星", CHAR_GAP = 110, TEXT_START = FIRST + (BUBBLES - 1) * GAP + 780;
+  Array.from(TEXT).forEach((ch, i) => {
+    const span = document.createElement("span");
+    if (ch === " ") { span.className = "space"; span.innerHTML = "&nbsp;"; } else { span.textContent = ch; }
+    span.style.animationDelay = (TEXT_START + i * CHAR_GAP) + "ms";
+    textEl.appendChild(span);
+  });
+
+  let finished = false, autoTimer = null;
+  const finish = () => {
+    if (finished) return; finished = true; if (autoTimer) clearTimeout(autoTimer);
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.hidden = true; overlay.onclick = null; done(); }, 460);
+  };
+  overlay.onclick = finish;
+  autoTimer = setTimeout(finish, TEXT_START + Array.from(TEXT).length * CHAR_GAP + 1400);
+}
+
+function showEnglishTearScene(done) {
+  const overlay = $("#tear-overlay");
+  overlay.innerHTML = `
+    <div class="tear-fish-wrap">
+      <svg class="tear-fish" viewBox="0 0 14 9"><use href="#pixelfish" /></svg>
+      <div class="tear-drop"></div>
+    </div>
+    <div class="tear-text">i love english</div>
+  `;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("show"));
+
+  let finished = false, autoTimer = null;
+  const finish = () => {
+    if (finished) return; finished = true; if (autoTimer) clearTimeout(autoTimer);
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.hidden = true; overlay.onclick = null; overlay.innerHTML = ""; done(); }, 380);
+  };
+  overlay.onclick = finish;
+  autoTimer = setTimeout(finish, 3200);
+}
+
+/* =========================================================
+   5) Supabase 数据库提交与查询
+   ========================================================= */
+async function submitScore(name, score) {
+  try {
+    await fetch(`${CONFIG.supabase.url}/scores`, {
+      method: "POST",
+      headers: {
+        "apikey": CONFIG.supabase.key,
+        "Authorization": `Bearer ${CONFIG.supabase.key}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({ player_name: name, score: score })
+    });
+  } catch (e) {}
+}
+
+async function fetchRank(name, myScore) {
+  try {
+    const res = await fetch(`${CONFIG.supabase.url}/scores?select=player_name,score`, {
+      headers: {
+        "apikey": CONFIG.supabase.key,
+        "Authorization": `Bearer ${CONFIG.supabase.key}`
+      }
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows.length) return null;
+
+    const best = {};
+    rows.forEach((r) => {
+      const n = r.player_name, s = Number(r.score);
+      if (!(n in best) || s > best[n]) best[n] = s;
+    });
+
+    const arr = Object.entries(best).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
+    const rank = arr.findIndex((r) => r.name === name && r.score === myScore) + 1;
+    return { rank: rank || null, total: arr.length };
+  } catch { return null; }
+}
+
+/* =========================================================
+   6) 结果页
+   ========================================================= */
+function showResult() {
+  quizScreen.hidden = true; resultScreen.hidden = false;
+  const total = CONFIG.questions.length, correct = state.correct, r = total ? correct / total : 0;
+
+  let title, quote;
+  if (correct === total)        { title = " 😍"; quote = "刻在我心里名字，送你陈宝猪的小脚趾。"; }
+  else if (correct >= total - 2) { title = "复合吧"; quote = "不知道你这么了解我🐶。"; }
+  else if (correct >= total - 4) { title = "分手吧😥"; quote = "还没好好的感受属于我们的温柔。"; }
+  else if (correct >= total / 2) { title = "暧昧边界 🙂"; quote = "可能在我左右，你在追求孤独的自由。"; }
+  else if (correct >= 2)         { title = " 千纸鹤🤔"; quote = "嗯……缘分还在慢慢靠近，别急。"; }
+  else                           { title = "滚吧吧邮差来迟 😅"; quote = "你是一封信，我是邮差，还没送到心里来滚远点。。。"; }
+
+  $("#result-title").textContent = title;
+  $("#result-score").textContent = `${state.name} 答对了 ${correct} / ${total} 题`;
+  $("#result-quote").textContent = quote;
+
+  const perfect = correct === total;
+  const answersBtn = $("#show-answers-btn"), answerPanel = $("#answer-panel");
+  answersBtn.hidden = perfect; answersBtn.textContent = "查看正确答案";
+  answerPanel.hidden = true; answerPanel.innerHTML = "";
+
+  const orn = $("#orn-layer"); orn.innerHTML = "";
+  addDecorations(orn);
+
+  const y = 400 - 345 * r, halfW = (TREE_W / 2) * (y / TREE_H), maxOff = Math.max(0, halfW * 0.8 - 10);
+  const x = TREE_W / 2 + (Math.random() * 2 - 1) * maxOff;
+
+  const pin = document.createElement("div"); pin.className = "friend-pin";
+  pin.style.left = "150px"; pin.style.top = "432px";
+  pin.innerHTML = `<div class="pin-avatar">${esc(Array.from(state.name)[0] || "?")}</div><div class="pin-name">${esc(state.name)}</div>`;
+  orn.appendChild(pin);
+
+  void pin.offsetWidth;
+  requestAnimationFrame(() => { pin.style.left = x + "px"; pin.style.top = y + "px"; });
+
+  const star = $("#star"); star.classList.remove("boom");
+  if (perfect) setTimeout(() => star.classList.add("boom"), 600);
+
+  const rankLine = $("#rank-line");
+  rankLine.hidden = true;
+  rankLine.textContent = "正在获取实时排名...";
+  rankLine.hidden = false;
+  
+  submitScore(state.name, correct);
+  fetchRank(state.name, correct).then((res) => {
+    if (res && res.rank) {
+      rankLine.textContent = `实时排名：第 ${res.rank} 名 / 共 ${res.total} 人`;
+    } else {
+      rankLine.hidden = true; // 如果请求失败或没有数据，隐藏排名
+    }
+  });
+}
+
+function addDecorations(parent) {
+  const colors = ["#9be7ff", "#ffffff", "#7be0c3", "#c7b8ff", "#ffd166", "#7fd2f0"];
+  for (let i = 0; i < 22; i++) {
+    const y = 36 + Math.random() * 376, halfW = (TREE_W / 2) * (y / TREE_H);
+    const x = TREE_W / 2 + (Math.random() * 2 - 1) * Math.max(0, halfW - 12);
+    const d = document.createElement("div"); d.className = "deco";
+    const size = 5 + Math.random() * 6;
+    d.style.left = x + "px"; d.style.top = y + "px"; d.style.width = size + "px"; d.style.height = size + "px";
+    const c = colors[i % colors.length];
+    d.style.background = c; d.style.color = c;
+    d.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+    parent.appendChild(d);
+  }
+}
+
+/* =========================================================
+   7) 答案与重置
+   ========================================================= */
+function renderAnswers() {
+  const panel = $("#answer-panel"); panel.innerHTML = "";
+  CONFIG.questions.forEach((q, qi) => {
+    const your = state.answers[qi], ok = your === q.answer;
+    const div = document.createElement("div"); div.className = "answer-item";
+    const yourText = your == null ? "未作答" : `${"ABCD"[your]}. ${esc(q.options[your])}`;
+    div.innerHTML = `
+      <div class="answer-q">第 ${qi + 1} 题：${esc(q.q)}</div>
+      <div class="answer-yours ${ok ? "ok" : ""}">你的选择：${yourText} ${ok ? "✓" : "✗"}</div>
+      <div class="answer-right">正确答案：${"ABCD"[q.answer]}. ${esc(q.options[q.answer])}</div>`;
+    panel.appendChild(div);
+  });
+}
+
+$("#show-answers-btn").addEventListener("click", () => {
+  const panel = $("#answer-panel"), btn = $("#show-answers-btn");
+  if (panel.hidden) { renderAnswers(); panel.hidden = false; btn.textContent = "收起答案"; }
+  else { panel.hidden = true; btn.textContent = "查看正确答案"; }
+});
+
+$("#restart-btn").addEventListener("click", () => start());
+</script>
+</body>
+</html>
